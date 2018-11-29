@@ -1,0 +1,357 @@
+<?xml version="1.0"?>
+<DTS:Executable xmlns:DTS="www.microsoft.com/SqlServer/Dts"
+  DTS:refId="Package"
+  DTS:CreationDate="5/1/2018 3:52:59 PM"
+  DTS:CreationName="Microsoft.Package"
+  DTS:CreatorComputerName="FSCLT81536"
+  DTS:CreatorName="AAC\vafscsamins"
+  DTS:DTSID="{AB2B6F14-2F76-48C0-B24C-125CED2CF11B}"
+  DTS:ExecutableType="Microsoft.Package"
+  DTS:LastModifiedProductVersion="14.0.3002.107"
+  DTS:LocaleID="1033"
+  DTS:ObjectName="PhIII_Summary Tables_Dialysis"
+  DTS:PackageType="5"
+  DTS:VersionBuild="37"
+  DTS:VersionGUID="{3D54E7A5-2FA4-4191-ACE4-6EA8460691A8}">
+  <DTS:Property
+    DTS:Name="PackageFormatVersion">8</DTS:Property>
+  <DTS:ConnectionManagers>
+    <DTS:ConnectionManager
+      DTS:refId="Package.ConnectionManagers[10.224.148.39.FSC_Analytics]"
+      DTS:CreationName="OLEDB"
+      DTS:DTSID="{BF1E3307-04B9-4EDF-8C43-D35239A384D6}"
+      DTS:ObjectName="10.224.148.39.FSC_Analytics">
+      <DTS:ObjectData>
+        <DTS:ConnectionManager
+          DTS:ConnectionString="Data Source=10.224.148.39;Initial Catalog=FSC_Analytics_FBCS;Provider=SQLNCLI11.1;Integrated Security=SSPI;Auto Translate=False;" />
+      </DTS:ObjectData>
+    </DTS:ConnectionManager>
+  </DTS:ConnectionManagers>
+  <DTS:Variables />
+  <DTS:Executables>
+    <DTS:Executable
+      DTS:refId="Package\1-ClaimAnalysisSummary"
+      DTS:CreationName="Microsoft.ExecuteSQLTask"
+      DTS:Description="Execute SQL Task"
+      DTS:DTSID="{368C709E-44E9-4B1D-9B43-D1D3E0BC5A56}"
+      DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+      DTS:LocaleID="-1"
+      DTS:ObjectName="1-ClaimAnalysisSummary"
+      DTS:ThreadHint="0">
+      <DTS:Variables />
+      <DTS:ObjectData>
+        <SQLTask:SqlTaskData
+          SQLTask:Connection="{BF1E3307-04B9-4EDF-8C43-D35239A384D6}"
+          SQLTask:SqlStatementSource="&#xA;/******************************&#xA;** File: Initial script&#xA;** Name: Claimanalysis&#xA;** Desc:&#xA;&#xA;** Auth:    ** &#xA;**************************&#xA;** Change History&#xA;**************************&#xA;** PR   Date            Author                  Description &#xA;** --   --------        -------                  ------------------------------------&#xA;** 1    04/27/2018      Greg&#x9;&#x9;&#x9;&#x9;&#x9;    Initial script&#xA;** 2    05/09/2018      sindhu&#x9;                    updated script&#xA;** 3    05/10/2018      sindhu                      updated script  &#xA;** 4    09/18/2018      sindhu                       added if exists drop statement            &#xA;*******************************/&#xA;&#xA;IF Object_id('fsc_analytics_fbcs.FBCSDPT.phIII_ClaimAnalysisSummary') IS NOT NULL &#xA;  DROP TABLE fsc_analytics_fbcs.FBCSDPT.phIII_ClaimAnalysisSummary &#xA;&#xA;go &#xA;&#xA;&#xA;&#xA;WITH dtl AS &#xA;( &#xA;       SELECT &#xA;              claimjudgmentid, &#xA;              clmline.claimjudgmentlineid , &#xA;              clmline.dateofservicefrom, &#xA;              clmline.dateofservicethrough , &#xA;              clmline.chargeamount , &#xA;              clmline.netamount , &#xA;              clmline.procedurecode, &#xA;              clmline.proceduredescription, &#xA;              clmline.units, &#xA;              clmline.typeofservicecode &#xA;             &#xA;       FROM   [FBCSDPT].[phiii_vahcps_claimjudgmentline_fy17] AS clmline &#xA;       WHERE  Isnull(clmline.dateofservicefrom, '1-1-1900') &gt;= '10-1-2015' ) &#xA; , claiminfo AS &#xA;( &#xA;           SELECT     jdg.claimjudgmentid , &#xA;                      try_cast(Max( &#xA;                      CASE &#xA;                                 WHEN clmdx.[sequence] = 1 THEN clmdx.diagnosiscode_ud &#xA;                      END) as varchar(7)) AS primarydiagnosticcode , &#xA;                      try_cast(max( &#xA;                      CASE &#xA;                                 WHEN clmdx.[sequence] = 3 THEN clmdx.diagnosiscode_ud &#xA;                      END) AS varchar(7)) AS secondarydiagnosticcode , &#xA;                      try_cast(max( &#xA;                      CASE &#xA;                                 WHEN clmdx.[sequence] = 4 THEN clmdx.diagnosiscode_ud &#xA;                      END) AS varchar(7)) AS                                tertiarydiagnosticcode , &#xA;                      max(try_cast(stat.claim_status_ud   AS varchar(20))) AS claim_status_ud , &#xA;                      max(try_cast(typ.claim_form_type_ud AS varchar(20))) AS claim_form_type_ud &#xA;                  &#xA;           FROM       [FBCSDPT].[phiii_vahcps_claimjudgment_fy17] AS jdg &#xA;           INNER JOIN dtl &#xA;           ON         jdg.claimjudgmentid = dtl.claimjudgmentid &#xA;                     &#xA;           INNER JOIN [FBCSDPT].[phiii_pcmdial_claim_fy17] AS clm &#xA;           ON         jdg.externalclaimud = clm.claim_ud &#xA;                    &#xA;           INNER JOIN [FBCSDPT].[phiii_pcmdial_claim_diagnosis_fy17] AS clmdx &#xA;           ON         clm.claim_id = clmdx.claim_id &#xA;           AND        clmdx.[sequence] &lt;= 4 &#xA;                    &#xA;           INNER JOIN [FBCSDPT].[phiii_pcmdial_claim_status_fy17] AS stat &#xA;           ON         clm.claim_status_id = stat.claim_status_id &#xA;                      &#xA;           INNER JOIN [FBCSDPT].[phiii_pcmdial_claim_form_type_fy17] AS typ &#xA;           ON         clm.claim_form_typ_id = typ.claim_form_type_id &#xA;           GROUP BY   jdg.claimjudgmentid ) , &#xA; header AS &#xA;( &#xA;                SELECT          jdg.claimjudgmentid, &#xA;                                prop.paymentid, &#xA;                                rec_pay.reconciledpaymentid, &#xA;                                jdg_mem.claimjudgmentmemberid, &#xA;                                clm.referral_id , &#xA;                                jdg.CliamJudgmentProviderID, &#xA;                                jdg_vnd.claimjudgmentvendorid , &#xA;                                row_number() OVER( ORDER BY jdg.claimjudgmentid ) AS idx , &#xA;                                jdg.externalclaimud, &#xA;                                jdg.invoicenumber, &#xA;                                isnull(clm.referral_ud,'')                  AS referral_ud , &#xA;                                isnull(jdg.receiveddate, '1-1-1900')        AS receiveddate , &#xA;                                isnull(jdg.invoicedate, '1-1-1900')         AS invoicedate , &#xA;                                isnull(rec_pay.checkdate, '1-1-1900')       AS checkdate , &#xA;                                isnull(jdg.claimacceptancedate, '1-1-1900') AS claimacceptancedate , &#xA;                                isnull(rec_pay.fmschkcfrmprocessdate, '1-1-1900')   AS fmschkcfrmprocessdate , &#xA;                                isnull(rec_pay.amount,0)                    AS reconciledpayment_amount , &#xA;                                jdg.dln                                     AS dln , &#xA;                                isnull(pay.documentid,0)                    AS documentid , &#xA;                                isnull(rec_pay.checknumber,0)               AS reconciledpayment_checknumber , &#xA;                                isnull(pay.paymentvoucheramount,0)          AS paymentvoucheramount , &#xA;                                jdg_vnd.vendorcode , &#xA;                                jdg_vnd.postalcode           AS vendor_postalcode , &#xA;                                jdg_vnd.NAME                 AS vendor_name , &#xA;                                isnull(jdg_prv.lastname,'')  AS provider_lastname , &#xA;                                isnull(jdg_prv.firstname,'') AS provider_firstname , &#xA;                                jdg_prv.npi, &#xA;                                jdg_prv.postalcode           AS provider_postalcode , &#xA;                                isnull(mem.member_id,0)      AS member_id , &#xA;                                LEFT(jdg_mem.memberid,9)     AS ssn , &#xA;                                isnull(mem.dob , '1-1-1900') AS dob &#xA;&#xA;             &#xA;&#x9;&#x9;&#x9;&#x9;FROM  [FBCSDPT].[phiii_vahcps_claimjudgment_fy17] AS jdg &#xA;                INNER JOIN      claiminfo                    AS dtl &#xA;                ON              jdg.claimjudgmentid = dtl.claimjudgmentid &#xA;                               &#xA;                INNER JOIN      [FBCSDPT].[phiii_vahcps_proposedpayment_fy17] AS prop &#xA;                ON              jdg.paymentid = prop.paymentid &#xA;                              &#xA;                INNER JOIN      [FBCSDPT].[phiii_vahcps_claimjudgmentmember_fy17] AS jdg_mem &#xA;                ON              jdg.claimjudgmentpatientid = jdg_mem.claimjudgmentmemberid &#xA;                               &#xA;                INNER JOIN      [FBCSDPT].[phiii_vahcps_claimjudgmentvendor_fy17] AS jdg_vnd &#xA;                ON              jdg_vnd.claimjudgmentvendorid = jdg.claimjudgmentvendorid &#xA;                               &#xA;                INNER JOIN      [FBCSDPT].[phiii_vahcps_claimjudgmentprovider_fy17] AS jdg_prv &#xA;                ON              jdg_prv.claimjudgmentproviderid = jdg.CliamJudgmentProviderID&#xA;                                &#xA;                INNER JOIN      [FBCSDPT].[phiii_pcmdial_claim_fy17] AS clm &#xA;                ON              jdg.externalclaimud = clm.claim_ud &#xA;                               &#xA;                LEFT OUTER JOIN [FBCSDPT].[phiii_vahcps_reconciledpayment_fy17] AS rec_pay &#xA;                ON              jdg.paymentid = rec_pay.paymentid &#xA;                       &#xA;                INNER JOIN      [FBCSDPT].[phiii_vahcps_payment_fy17] AS pay &#xA;                ON              jdg.paymentid = pay.paymentid &#xA;                              &#xA;                INNER JOIN      [FBCSDPT].[phiii_pcmdial_member_fy17] AS mem &#xA;                ON              LEFT(jdg_mem.memberid,9) = mem.ssn ) ,&#xA;dtl_summary AS &#xA;( &#xA;         SELECT   claimjudgmentid , &#xA;                  count(claimjudgmentlineid)    AS claimlines , &#xA;                  min(dateofservicefrom)        AS min_dateofservicefrom , &#xA;                  max(dateofservicethrough)     AS max_dateofservicethrough , &#xA;                  sum(isnull(chargeamount,0))   AS total_chargeamount , &#xA;                  sum(isnull(netamount,0))      AS total_netamount , &#xA;                  count(DISTINCT procedurecode) AS count_procedurecode , &#xA;                  sum(units)                    AS sum_units &#xA;         FROM     dtl &#xA;         GROUP BY claimjudgmentid &#xA;         HAVING   sum(isnull(chargeamount,0)) &gt; 0 ) &#xA;SELECT     header.claimjudgmentid, &#xA;           header.paymentid, &#xA;           header.reconciledpaymentid, &#xA;           header.claimjudgmentmemberid, &#xA;           header.referral_id , &#xA;           header.CliamJudgmentProviderID, &#xA;           header.claimjudgmentvendorid , &#xA;           header.idx , &#xA;           header.externalclaimud, &#xA;           header.invoicenumber, &#xA;           header.referral_ud , &#xA;           header.receiveddate , &#xA;           header.invoicedate , &#xA;           header.checkdate , &#xA;           header.claimacceptancedate , &#xA;           header.fmschkcfrmprocessdate , &#xA;           header.reconciledpayment_amount , &#xA;           header.dln , &#xA;           header.documentid , &#xA;           header.reconciledpayment_checknumber , &#xA;           header.paymentvoucheramount , &#xA;           header.vendorcode , &#xA;           header.vendor_postalcode , &#xA;           header.vendor_name , &#xA;           header.provider_lastname , &#xA;           header.provider_firstname , &#xA;           header.provider_postalcode , &#xA;           header.npi , &#xA;           header.member_id , &#xA;           header.ssn , &#xA;           header.dob , &#xA;           dtl_summary.claimlines, &#xA;           dtl_summary.min_dateofservicefrom, &#xA;           dtl_summary.max_dateofservicethrough , &#xA;           dtl_summary.total_chargeamount , &#xA;           dtl_summary.total_netamount , &#xA;           dtl_summary.count_procedurecode, &#xA;           dtl_summary.sum_units , &#xA;           claiminfo.primarydiagnosticcode , &#xA;           claiminfo.secondarydiagnosticcode , &#xA;           claiminfo.tertiarydiagnosticcode , &#xA;           claiminfo.claim_status_ud , &#xA;           claiminfo.claim_form_type_ud &#xA;&#xA;&#x9;&#x9;   into fsc_analytics_fbcs.FBCSDPT.phIII_ClaimAnalysisSummary&#xA;FROM       header &#xA;INNER JOIN dtl_summary &#xA;ON         header.claimjudgmentid = dtl_summary.claimjudgmentid &#xA;INNER JOIN claiminfo &#xA;ON         header.claimjudgmentid = claiminfo.claimjudgmentid  &#xA;&#xA;--****deleting duplicate claimid(externalclaimid)&#xA;delete from  fsc_analytics_fbcs.FBCSDPT.phIII_ClaimAnalysisSummary  where   externalclaimud  = 'UB072616DIA0039' and &#xA;reconciledpaymentid = 560442&#xA;&#xA;&#xA;&#xA;" xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+      </DTS:ObjectData>
+    </DTS:Executable>
+    <DTS:Executable
+      DTS:refId="Package\2-DialysisClaimSummary"
+      DTS:CreationName="Microsoft.ExecuteSQLTask"
+      DTS:Description="Execute SQL Task"
+      DTS:DTSID="{F2E4B743-A3D8-449A-9C7F-F0C5236BF812}"
+      DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+      DTS:LocaleID="-1"
+      DTS:ObjectName="2-DialysisClaimSummary"
+      DTS:ThreadHint="0">
+      <DTS:Variables />
+      <DTS:ObjectData>
+        <SQLTask:SqlTaskData
+          SQLTask:Connection="{BF1E3307-04B9-4EDF-8C43-D35239A384D6}"
+          SQLTask:SqlStatementSource="&#xA;/******************************&#xA;** File: Initial script&#xA;** Name: dialysisclaimsummary &#xA;** Desc:&#xA;&#xA;** Auth:    ** &#xA;**************************&#xA;** Change History&#xA;**************************&#xA;** PR   Date            Author                  Description &#xA;** --   --------        -------                  ------------------------------------&#xA;** 1    04/27/2018      Greg&#x9;&#x9;&#x9;&#x9;&#x9;    Initial script&#xA;** 2    05/09/2018      sindhu&#x9;&#xA;*******************************/&#xA;&#xA;&#xA;IF Object_id('FSC_Analytics_FBCS.FBCSDPT.phIII_DialysisClaimSummary ') IS NOT NULL &#xA;  DROP TABLE fsc_analytics_fbcs.FBCSDPT.phIII_DialysisClaimSummary  &#xA;&#xA;go &#xA;&#xA;SELECT referral_ud                                                     AS        Unique_Auth_ID, &#xA;       externalclaimud                                                 AS        Claim_ID, &#xA;       min_dateofservicefrom                                           AS        MinDateOfServiceFrom, &#xA;       'Contract Dialysis'                                             AS        Program, &#xA;       receiveddate                                                    AS        ScannedDate, &#xA;       total_chargeamount                                              AS        ChargedAmount, &#xA;       claim_status_ud                                                 AS        [Status], &#xA;       vendorcode                                                      AS         Tax_ID, &#xA;       Cast(Getdate() AS DATE)                                         AS        dadloaddate, &#xA;       ssn                                                             AS SSN, &#xA;       LEFT(DimPay.obligationnumber, 3)                                AS        StationNumber, &#xA;       14                                                              AS        ICDChapter_Primary, &#xA;       Isnull(DimDX2.chapter, -1)                                      AS        ICDChapter_Secondary, &#xA;       Isnull(DimDX3.chapter, -1)                                      AS        ICDChapter_Tertiary, &#xA;       Cast(Datediff(d, receiveddate, fmschkcfrmprocessdate) AS FLOAT) AS        DaysBetweenReceivedAndPaid, &#xA;       total_netamount                                                 AS        PaidAmount, &#xA;       fmschkcfrmprocessdate                                           AS        PaidDate, &#xA;       checkdate                                                       AS        ProcessedDate, &#xA;       DimPay.obligationnumber                                         AS        FMS_Unique_Oblig, &#xA;       primarydiagnosticcode                                           AS        ICDCode_1, &#xA;       secondarydiagnosticcode                                         AS        ICDCode_2, &#xA;       tertiarydiagnosticcode                                          AS        ICDCode_3, &#xA;       dln, &#xA;       SRC.documentid, &#xA;       invoicenumber, &#xA;       invoicedate, &#xA;       reconciledpayment_checknumber, &#xA;       sum_units, &#xA;       npi &#xA;--INTO   fsc_analytics_fbcs.[Dflt].dialysisclaimsummary &#xA;INTO   fsc_analytics_fbcs.FBCSDPT.phIII_DialysisClaimSummary &#xA;FROM   [FSC_Analytics_FBCS].FBCSDPT.phIII_ClaimAnalysisSummary  AS SRC &#xA;       LEFT OUTER JOIN fsc_analytics_fbcs.[FBCSDPT].[phiii_vahcps_payment_fy17]   AS    DimPay &#xA;                    ON SRC.paymentid = DimPay.paymentid &#xA;       LEFT OUTER JOIN fsc_analytics.dflt_oblh.dimdiagnosischapters AS DimDX2 &#xA;                    ON SRC.secondarydiagnosticcode BETWEEN &#xA;                       DimDX2.icdcodebegin AND DImDX2.icdcodeend &#xA;       LEFT OUTER JOIN fsc_analytics.dflt_oblh.dimdiagnosischapters AS DimDX3 &#xA;                    ON SRC.tertiarydiagnosticcode BETWEEN &#xA;                       DimDX3.icdcodebegin AND DimDX3.icdcodeend &#xA;&#xA;go &#xA;&#xA;CREATE CLUSTERED INDEX grp_auth &#xA;&#xA;  on fsc_analytics_fbcs.FBCSDPT.phIII_DialysisClaimSummary (unique_auth_id) &#xA;&#xA;go &#xA;&#xA;CREATE UNIQUE INDEX pk_claim &#xA;&#xA;   ON fsc_analytics_fbcs.FBCSDPT.phIII_DialysisClaimSummary (claim_id) &#xA;  include (paidamount, mindateofservicefrom) &#xA;&#xA;go &#xA;&#xA;CREATE INDEX fk_claim &#xA;&#xA;  ON fsc_analytics_fbcs.FBCSDPT.phIII_DialysisClaimSummary  (fms_unique_oblig) &#xA;  include (paidamount) &#xA;&#xA;go   &#xA;&#xA;&#xA;" xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+      </DTS:ObjectData>
+    </DTS:Executable>
+    <DTS:Executable
+      DTS:refId="Package\3-DialysisAuthSummary"
+      DTS:CreationName="Microsoft.ExecuteSQLTask"
+      DTS:Description="Execute SQL Task"
+      DTS:DTSID="{5F7B45DA-2DBE-498E-ADF7-B553803EE8B5}"
+      DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+      DTS:LocaleID="-1"
+      DTS:ObjectName="3-DialysisAuthSummary"
+      DTS:ThreadHint="0">
+      <DTS:Variables />
+      <DTS:ObjectData>
+        <SQLTask:SqlTaskData
+          SQLTask:Connection="{BF1E3307-04B9-4EDF-8C43-D35239A384D6}"
+          SQLTask:SqlStatementSource="&#xA;/******************************&#xA;** File: Initial script&#xA;** Name: dialysisauthsummary &#xA;** Desc:&#xA;&#xA;** Auth:    ** &#xA;**************************&#xA;** Change History&#xA;**************************&#xA;** PR   Date            Author                  Description &#xA;** --   --------        -------                  ------------------------------------&#xA;** 1    04/27/2018      Greg&#x9;&#x9;&#x9;&#x9;&#x9;    Initial script&#xA;** 2    05/09/2018      sindhu&#xA;** 3&#x9;08/14/2018&#x9;&#x9;Greg&#x9;&#x9;&#x9;&#x9;&#x9;Changed Obligation Ranking to use Latest Paid Date, not Highest Paid Amount&#xA;*******************************/&#xA;&#xA;&#xA;USE fsc_analytics_fbcs &#xA;&#xA;go &#xA;&#xA;IF Object_id('fsc_analytics_fbcs.FBCSDPT.phIII_DialysisAuthSummary') IS NOT NULL &#xA;  DROP TABLE fsc_analytics_fbcs.FBCSDPT.phIII_DialysisAuthSummary &#xA;&#xA;go &#xA;&#xA;WITH fixobligationtoauthrelationship &#xA;     AS (SELECT unique_auth_id, &#xA;                fms_unique_oblig, &#xA;                Sum(paidamount)                    AS AuthObligationPaidAMount, &#xA;                Row_number() &#xA;                  OVER ( &#xA;                    partition BY unique_auth_id &#xA;                    ORDER BY Max(PaidDate) DESC) AS ObligationRank &#xA;         --FROM   fsc_analytics_fbcs.dflt.dialysisclaimsummary AS CLM &#xA;&#x9;&#x9;  FROM   --SELECT TOP 100 * FROM &#xA;&#x9;&#x9;  [FSC_Analytics_FBCS].FBCSDPT.phIII_DialysisClaimSummary AS CLM &#xA;         WHERE  Isnull(unique_auth_id, '') != '' &#xA;         GROUP  BY unique_auth_id, &#xA;                   fms_unique_oblig), &#xA; selectobligationforauth &#xA;     AS (SELECT unique_auth_id, &#xA;                Max(CASE &#xA;                      WHEN obligationrank = 1 THEN fms_unique_oblig &#xA;                    END)                      AS FMS_Unique_Oblig, &#xA;                Sum(authobligationpaidamount) AS TotalPaidAmount &#xA;         FROM   fixobligationtoauthrelationship &#xA;         GROUP  BY unique_auth_id), &#xA;claimagg &#xA;     AS (SELECT CLM.unique_auth_id, &#xA;                Max(mindateofservicefrom) AS LastDOS, &#xA;                Max(scanneddate)          AS LastScannedDate, &#xA;                Max(paiddate)             AS LastPaidDate, &#xA;                Max(processeddate)        AS LastClaimProcessDate &#xA;        -- FROM   fsc_analytics_fbcs.dflt.dialysisclaimsummary AS CLM &#xA;&#x9;&#x9; FROM  [FSC_Analytics_FBCS].FBCSDPT.phIII_DialysisClaimSummary AS CLM &#xA;         GROUP  BY CLM.unique_auth_id) &#xA;&#xA;&#xA;SELECT station                                              AS StationNumber, &#xA;       authorizationnumber                                  AS unique_auth_id, &#xA;       CASE &#xA;         WHEN Datediff(d, effectivedate, terminationdate) = 0 THEN 1 &#xA;         WHEN Datediff(m, effectivedate, terminationdate) * 30 &lt; &#xA;              Datediff(d, effectivedate, terminationdate) THEN &#xA;         Datediff(m, effectivedate, terminationdate)+ 1 &#xA;         ELSE Datediff(m, effectivedate, terminationdate) &#xA;       END                                                  AS    LengthOfAuthorization_M, &#xA;       effectivedate                                        AS authfromdate, &#xA;       terminationdate                                      AS authtodate, &#xA;       categorycode                                         AS categoryofcare, &#xA;       Dense_rank() &#xA;         OVER ( &#xA;           ORDER BY categorycode)                           AS CatCareID, &#xA;       ssn                                                  AS SSN, &#xA;       referredtoprovidertaxid                              AS Tax_ID, &#xA;       createdate                                           AS Date_Created, &#xA;       ( Cast(CONVERT(CHAR(12), Cast(effectivedate AS DATETIME), 112) AS INT) &#xA;         - Cast( &#xA;         CONVERT(CHAR(12), dob, 112) AS INT) ) / 10000      AS AgeAtAuthFromDate , &#xA;       statuscode, &#xA;       dob, &#xA;       updateddate, &#xA;       onsetdate, &#xA;       Isnull(selectobligationforauth.fms_unique_oblig, '') AS FMS_Unique_Oblig, &#xA;       Isnull(selectobligationforauth.totalpaidamount, 0)   AS PaidAmount, &#xA;       lastdos, &#xA;       lastscanneddate, &#xA;       lastpaiddate, &#xA;       lastclaimprocessdate &#xA;--INTO   fsc_analytics_fbcs.dflt.dialysisauthsummary &#xA;INTO   fsc_analytics_fbcs.FBCSDPT.phIII_DialysisAuthSummary&#xA;FROM   fsc_analytics_fbcs.fbcsdpt.phiii_dial_authorization_fy17 AS SRC &#xA;       LEFT OUTER JOIN selectobligationforauth &#xA;                    ON SRC.authorizationnumber = &#xA;                       selectobligationforauth.unique_auth_id &#xA;       LEFT OUTER JOIN claimagg &#xA;                    ON SRC.authorizationnumber = claimagg.unique_auth_id &#xA;WHERE  terminationdate &gt;= '10-1-2015' &#xA;&#xA;go &#xA;&#xA;CREATE UNIQUE CLUSTERED INDEX pk_stationobligationauth &#xA;  ON fsc_analytics_fbcs.FBCSDPT.phIII_DialysisAuthSummary (stationnumber, &#xA;fms_unique_oblig, unique_auth_id) &#xA;&#xA;go &#xA;&#xA;CREATE INDEX fk_categorycode &#xA;  ON fsc_analytics_fbcs.FBCSDPT.phIII_DialysisAuthSummary (catcareid) &#xA;  include (lengthofauthorization_m, paidamount) &#xA;&#xA;go &#xA;&#xA;CREATE INDEX fk_ssn &#xA;  ON fsc_analytics_fbcs.FBCSDPT.phIII_DialysisAuthSummary (ssn, authfromdate, authtodate) &#xA;  include (paidamount) &#xA;&#xA;go &#xA;&#xA;CREATE INDEX fk_taxid &#xA;  ON fsc_analytics_fbcs.FBCSDPT.phIII_DialysisAuthSummary(tax_id) &#xA;  include (paidamount) &#xA;&#xA;go   &#xA;&#xA;" xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+      </DTS:ObjectData>
+    </DTS:Executable>
+    <DTS:Executable
+      DTS:refId="Package\4-DialysisObligationSummary"
+      DTS:CreationName="Microsoft.ExecuteSQLTask"
+      DTS:Description="Execute SQL Task"
+      DTS:DTSID="{CB3DE69E-6FC5-4988-BB61-C034D5C943CB}"
+      DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+      DTS:LocaleID="-1"
+      DTS:ObjectName="4-DialysisObligationSummary"
+      DTS:ThreadHint="0">
+      <DTS:Variables />
+      <DTS:ObjectData>
+        <SQLTask:SqlTaskData
+          SQLTask:Connection="{BF1E3307-04B9-4EDF-8C43-D35239A384D6}"
+          SQLTask:SqlStatementSource="&#xA;/******************************&#xA;** File: Initial script&#xA;** Name: ObligationSummary&#xA;** Desc:&#xA;&#xA;** Auth:Sindhu Samineni     ** &#xA;**************************&#xA;** Change History&#xA;**************************&#xA;** PR   Date            Author                  Description &#xA;** --   --------        -------                  ------------------------------------&#xA;** 1    04/27/2018      Anup/Greg/Sindhu&#x9;&#x9;&#x9;&#x9;&#x9;    Initial script&#xA;** 2    05/09/2018      Sindhu&#x9;&#x9;&#x9;&#x9;&#x9;                Updated script&#xA;** 3    08/02/2018      Sindhu&#x9;                                Repalced left outer  join with inner join as per greg&#xA;*******************************/&#xA;USE fsc_analytics_fbcs &#xA;&#xA;go &#xA;&#xA;IF Object_id('fsc_analytics_fbcs.FBCSDPT.phIII_DialysisObligationSummary') IS NOT NULL &#xA;  DROP TABLE fsc_analytics_fbcs.FBCSDPT.phIII_DialysisObligationSummary &#xA;&#xA;go &#xA;&#xA;SELECT Min (Pmt.fiscalyear)                 AS FiscalYear_Main, &#xA;       Pmt.obligationnumber, &#xA;       Cjm.station                          AS Station, &#xA;       Count (DISTINCT Cjm.ssn)             AS Count_SSN, &#xA;       Count (DISTINCT Cjt.invoicenumber)   AS Count_InvoiceNumber, &#xA;       Count (DISTINCT Clm.vendor_id)       AS CountDistinct_vendor_id, &#xA;       Count (Cjt.claimjudgmentid)          AS CountDistinct_claimjudgmentid, &#xA;       Min (Cjt.receiveddate)               AS FirstInvoiceReceived, &#xA;       Max (Cjt.receiveddate)               AS LastInvoiceReceived, &#xA;       Min (Dia.mindateofservicefrom)       AS Min_MinDateOfServiceFrom, &#xA;       Avg (Dia.daysbetweenreceivedandpaid) AS Avg_DaysBetweenReceivedAndPaid, &#xA;       Sum (Dia.sum_units)                  AS Sum_Units, &#xA;       Sum (Dia.paidamount)                 AS Sum_PaidAmount, &#xA;       OBLH.fiscalyear, &#xA;       OBLH.fund, &#xA;       OBLH.boc, &#xA;       OBLH.cc, &#xA;       OBLH.fcpacc, &#xA;       OBLH.openamount, &#xA;       OBLH.accruedamount, &#xA;       OBLH.outstandingamount, &#xA;       OBLH.orderedamount, &#xA;       OBLH.expendedamount, &#xA;       OBLH.originalamount, &#xA;       OBLH.amendedamount &#xA;&#xA;INTO   fsc_analytics_fbcs.FBCSDPT.phIII_DialysisObligationSummary&#xA;FROM   fsc_analytics_fbcs.fbcsdpt.phiii_vahcps_payment_fy17 Pmt &#xA;       INNER JOIN fsc_analytics_fbcs.fbcsdpt.phiii_vahcps_claimjudgment_fy17 Cjt &#xA;               ON Pmt.paymentid = Cjt.paymentid &#xA;       INNER JOIN &#xA;       fsc_analytics_fbcs.fbcsdpt.phiii_vahcps_claimjudgmentmember_fy17 Cjm &#xA;               ON Cjt.claimjudgmentpatientid = Cjm.claimjudgmentmemberid &#xA;       INNER JOIN fsc_analytics_fbcs.fbcsdpt.phiii_pcmdial_claim_fy17 Clm &#xA;               ON Clm.claim_ud = Cjt.externalclaimud &#xA;       --INNER JOIN fsc_analytics_fbcs.dflt.dialysisclaimsummary Dia &#xA;&#x9;  INNER JOIN FBCSDPT.phIII_DialysisClaimSummary Dia&#xA;               ON Clm.claim_ud = Dia.claim_id &#xA;       INNER JOIN fsc_analytics_fbcs.fbcsdpt.phiii_pcmdial_claim_fy17 ref &#xA;               ON Clm.claim_id = ref.claim_id &#xA;       INNER JOIN fsc_analytics_fbcs.dflt.dialysisauthsummary Auh &#xA;               ON ref.referral_ud = Auh.unique_auth_id &#xA;       --LEFT OUTER JOIN fsc_analytics.dflt_oblh.obligationsummary_combined_oblh AS OBLH &#xA;&#x9;   INNER  JOIN fsc_analytics.dflt_oblh.obligationsummary_combined_oblh AS OBLH  --3&#xA;                    ON PMT.obligationnumber = OBLH.fms_unique_oblig &#xA;GROUP  BY Pmt.obligationnumber, &#xA;          Cjm.station, &#xA;          OBLH.fiscalyear, &#xA;          OBLH.fund, &#xA;          OBLH.boc, &#xA;          OBLH.cc, &#xA;          OBLH.fcpacc, &#xA;          OBLH.openamount, &#xA;          OBLH.accruedamount, &#xA;          OBLH.outstandingamount, &#xA;          OBLH.orderedamount, &#xA;          OBLH.expendedamount, &#xA;          OBLH.originalamount, &#xA;          OBLH.amendedamount   " xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+      </DTS:ObjectData>
+    </DTS:Executable>
+    <DTS:Executable
+      DTS:refId="Package\5-AnupSpotfireview"
+      DTS:CreationName="Microsoft.ExecuteSQLTask"
+      DTS:Description="Execute SQL Task"
+      DTS:DTSID="{342FAD1A-EE1C-40D8-980C-ADE19EB2DAC6}"
+      DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+      DTS:LocaleID="-1"
+      DTS:ObjectName="5-AnupSpotfireview"
+      DTS:ThreadHint="0">
+      <DTS:Variables />
+      <DTS:ObjectData>
+        <SQLTask:SqlTaskData
+          SQLTask:Connection="{BF1E3307-04B9-4EDF-8C43-D35239A384D6}"
+          SQLTask:SqlStatementSource="&#xA;&#xA;/******************************&#xA;** File: Initial script&#xA;** Name: &#xA;** Desc:&#xA;&#xA;** Auth:    ** &#xA;**************************&#xA;** Change History&#xA;**************************&#xA;** PR   Date            Author                  Description &#xA;** --   --------        -------                  ------------------------------------&#xA;** 1    05/17/2018      Anup&#x9;&#x9;&#x9;&#x9;&#x9;    Initial script&#xA;** 2    05/17/2018      Sindhu&#x9;&#x9;&#x9;&#x9;&#x9;    updated  script &#xA;** 3    09/18/2018      Sindhu&#x9;                   added if exists drop statement&#xA;*******************************/&#xA;&#xA;IF Object_id('[FSC_Analytics_FBCS].FBCSDPT.[phIII_Spotfireview]') IS NOT NULL &#xA;  DROP TABLE [FSC_Analytics_FBCS].FBCSDPT.[phIII_Spotfireview] &#xA;&#xA;go&#xA;&#xA;&#xA;SELECT DISTINCT DTH.ssn, &#xA;                DTH.stationnumber, &#xA;                categoryofcare, &#xA;                ageatauthfromdate, &#xA;                Year(onsetdate)                                     AS yearstart, &#xA;                Datediff(week,onsetdate,firstauthfromdateatstation) AS firstauthfromonsetatstation,&#xA;&#x9;&#x9;&#x9;&#x9; datediff(week,onsetdate,firstauthever)             AS firstautheverfromonset, &#xA;                datediff(week,onsetdate,firstserviceever)           AS firstserviceeverfromonset &#xA;&#xA;&#x9;&#x9;&#x9;&#x9;INTO [FSC_Analytics_FBCS].FBCSDPT.[phIII_Spotfireview]&#xA;FROM            &#xA;[FSC_Analytics_FBCS].[FBCSDPT].[phIII_DialysisAuthSummary] DTH&#xA;INNER JOIN &#xA;                ( SELECT   min(authfromdate) AS firstauthfromdateatstation, &#xA;                                  ssn, &#xA;                                  stationnumber &#xA;                         FROM      [FSC_Analytics_FBCS].[FBCSDPT].[phIII_DialysisAuthSummary]&#xA;                         GROUP BY stationnumber, &#xA;                                  ssn )&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;  &#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;   AS firstauthatstn &#xA;&#xA;ON              DTH.ssn = firstauthatstn.ssn &#xA;AND             DTH.stationnumber = firstauthatstn.stationnumber &#xA;&#xA;INNER JOIN &#xA;                ( SELECT   min(authfromdate) AS firstauthever, &#xA;                                  ssn &#xA;                         FROM     [FSC_Analytics_FBCS].[FBCSDPT].[phIII_DialysisAuthSummary]&#xA;                         GROUP BY ssn ) &#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9; &#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9; AS firstauthallstn &#xA;&#xA;ON              DTH.ssn = firstauthallstn.ssn &#xA;&#xA;INNER JOIN &#xA;                ( SELECT   min(mindateofservicefrom) AS firstserviceever, &#xA;                                  ssn &#xA;                         FROM     [FSC_Analytics_FBCS].[FBCSDPT].[phIII_DialysisClaimSummary]&#xA;                         GROUP BY ssn ) &#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9; AS startofserviceever &#xA;&#xA;ON              DTH.ssn = startofserviceever.ssn  &#xA;" xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+      </DTS:ObjectData>
+    </DTS:Executable>
+    <DTS:Executable
+      DTS:refId="Package\6-DialysisVendorPayments"
+      DTS:CreationName="Microsoft.ExecuteSQLTask"
+      DTS:Description="Execute SQL Task"
+      DTS:DTSID="{19CEDF66-D347-4CF2-9BC1-B14E0F7C4DB1}"
+      DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+      DTS:LocaleID="-1"
+      DTS:ObjectName="6-DialysisVendorPayments"
+      DTS:ThreadHint="0">
+      <DTS:Variables />
+      <DTS:ObjectData>
+        <SQLTask:SqlTaskData
+          SQLTask:Connection="{BF1E3307-04B9-4EDF-8C43-D35239A384D6}"
+          SQLTask:SqlStatementSource="/******************************&#xA;** File: Initial script&#xA;** Name: Dialysis Vendor payments&#xA;** Desc:&#xA;&#xA;** Auth:    ** &#xA;**************************&#xA;** Change History&#xA;**************************&#xA;** PR   Date            Author                  Description &#xA;** --   --------        -------                  ------------------------------------&#xA;** 1    05/23/2018      Anup&#x9;&#x9;&#x9;&#x9;&#x9;    Initial script&#xA;** 2    05/24/2018      Sindhu&#x9;&#x9;&#x9;&#x9;&#x9;    updated  script ,removed claimjudegement table&#xA;** 3    09/18/2018      Sindhu                       added if exists drop stmt&#xA;*******************************/&#xA;IF Object_id('fsc_analytics_fbcs.fbcsdpt.phiii_dialysisvendorpayments') IS NOT NULL &#xA;  DROP TABLE fsc_analytics_fbcs.fbcsdpt.phiii_dialysisvendorpayments &#xA;&#xA;go&#xA;&#xA;&#xA;SELECT inv.vendorid, &#xA;       inv.fms_unique_oblig, &#xA;       Sum (inv.amount) AS Sum_Amount, &#xA;       inv.sta, &#xA;       inv.[name], &#xA;       inv.fiscalyear, &#xA;       inv.fund &#xA;INTO   fsc_analytics_fbcs.fbcsdpt.phiii_dialysisvendorpayments &#xA;FROM   fsc_analytics_fbcs.fbcsdpt.phiii_invoicehistoryfy17 inv &#xA;  WHERE  inv.fiscalyear &gt; 2015 &#xA;GROUP  BY inv.sta, &#xA;          inv.fiscalyear, &#xA;          inv.fms_unique_oblig, &#xA;          inv.vendorid, &#xA;          inv.[name], &#xA;          inv.fund &#xA;&#xA;go   &#xA;&#xA;Create Clustered index grp_vend on fsc_analytics_fbcs.FBCSDPT.phIII_DialysisVendorPayments (sta,Fiscalyear)&#xA;GO&#xA;&#xA;Create Index Ind_Oblig on fsc_analytics_fbcs.FBCSDPT.phIII_DialysisVendorPayments (FMS_Unique_Oblig) &#xA;GO&#xA;&#xA;" xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+      </DTS:ObjectData>
+    </DTS:Executable>
+  </DTS:Executables>
+  <DTS:PrecedenceConstraints>
+    <DTS:PrecedenceConstraint
+      DTS:refId="Package.PrecedenceConstraints[Constraint]"
+      DTS:CreationName=""
+      DTS:DTSID="{619F388F-B014-4937-B17E-22A10F61FB48}"
+      DTS:From="Package\1-ClaimAnalysisSummary"
+      DTS:LogicalAnd="True"
+      DTS:ObjectName="Constraint"
+      DTS:To="Package\2-DialysisClaimSummary" />
+    <DTS:PrecedenceConstraint
+      DTS:refId="Package.PrecedenceConstraints[Constraint 1]"
+      DTS:CreationName=""
+      DTS:DTSID="{80EA356D-9BFE-4930-9201-911686E5BB11}"
+      DTS:From="Package\2-DialysisClaimSummary"
+      DTS:LogicalAnd="True"
+      DTS:ObjectName="Constraint 1"
+      DTS:To="Package\3-DialysisAuthSummary" />
+    <DTS:PrecedenceConstraint
+      DTS:refId="Package.PrecedenceConstraints[Constraint 2]"
+      DTS:CreationName=""
+      DTS:DTSID="{1D256ED8-73BD-43A7-999D-AD2092FEB9D0}"
+      DTS:From="Package\3-DialysisAuthSummary"
+      DTS:LogicalAnd="True"
+      DTS:ObjectName="Constraint 2"
+      DTS:To="Package\4-DialysisObligationSummary" />
+    <DTS:PrecedenceConstraint
+      DTS:refId="Package.PrecedenceConstraints[Constraint 3]"
+      DTS:CreationName=""
+      DTS:DTSID="{83480EFF-E0E5-4C10-BFF7-F37FE595F3DE}"
+      DTS:From="Package\4-DialysisObligationSummary"
+      DTS:LogicalAnd="True"
+      DTS:ObjectName="Constraint 3"
+      DTS:To="Package\5-AnupSpotfireview" />
+    <DTS:PrecedenceConstraint
+      DTS:refId="Package.PrecedenceConstraints[Constraint 4]"
+      DTS:CreationName=""
+      DTS:DTSID="{3D3055AB-D73D-49B9-8B37-D12A75E0A3FB}"
+      DTS:From="Package\5-AnupSpotfireview"
+      DTS:LogicalAnd="True"
+      DTS:ObjectName="Constraint 4"
+      DTS:To="Package\6-DialysisVendorPayments" />
+  </DTS:PrecedenceConstraints>
+  <DTS:DesignTimeProperties><![CDATA[<?xml version="1.0"?>
+<!--This CDATA section contains the layout information of the package. The section includes information such as (x,y) coordinates, width, and height.-->
+<!--If you manually edit this section and make a mistake, you can delete it. -->
+<!--The package will still be able to load normally but the previous layout information will be lost and the designer will automatically re-arrange the elements on the design surface.-->
+<Objects
+  Version="8">
+  <!--Each node below will contain properties that do not affect runtime behavior.-->
+  <Package
+    design-time-name="Package">
+    <LayoutInfo>
+      <GraphLayout
+        Capacity="16" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph" xmlns:mssgle="clr-namespace:Microsoft.SqlServer.Graph.LayoutEngine;assembly=Microsoft.SqlServer.Graph" xmlns:assembly="http://schemas.microsoft.com/winfx/2006/xaml">
+        <NodeLayout
+          Size="197.6,41.6"
+          Id="Package\1-ClaimAnalysisSummary"
+          TopLeft="116.000001975468,13.4588237181667" />
+        <NodeLayout
+          Size="195.2,41.6"
+          Id="Package\2-DialysisClaimSummary"
+          TopLeft="119.428573462427,84.4235305957728" />
+        <NodeLayout
+          Size="191.2,41.6"
+          Id="Package\3-DialysisAuthSummary"
+          TopLeft="122.857144949387,152.329413901069" />
+        <NodeLayout
+          Size="217.6,41.6"
+          Id="Package\4-DialysisObligationSummary"
+          TopLeft="130.285716504468,216.564708919591" />
+        <NodeLayout
+          Size="212.8,41.6"
+          Id="Package\5-AnupSpotfireview"
+          TopLeft="131.428573666786,284.470592224887" />
+        <NodeLayout
+          Size="204,41.6"
+          Id="Package\6-DialysisVendorPayments"
+          TopLeft="392.00000667572,17.1294120049394" />
+        <EdgeLayout
+          Id="Package.PrecedenceConstraints[Constraint]"
+          TopLeft="215.914287718947,55.0588237181667">
+          <EdgeLayout.Curve>
+            <mssgle:Curve
+              StartConnector="{assembly:Null}"
+              EndConnector="0,29.3647068776061"
+              Start="0,0"
+              End="0,21.8647068776061">
+              <mssgle:Curve.Segments>
+                <mssgle:SegmentCollection
+                  Capacity="5">
+                  <mssgle:LineSegment
+                    End="0,21.8647068776061" />
+                </mssgle:SegmentCollection>
+              </mssgle:Curve.Segments>
+            </mssgle:Curve>
+          </EdgeLayout.Curve>
+          <EdgeLayout.Labels>
+            <EdgeLabelCollection />
+          </EdgeLayout.Labels>
+        </EdgeLayout>
+        <EdgeLayout
+          Id="Package.PrecedenceConstraints[Constraint 1]"
+          TopLeft="217.742859205907,126.023530595773">
+          <EdgeLayout.Curve>
+            <mssgle:Curve
+              StartConnector="{assembly:Null}"
+              EndConnector="0,26.3058833052962"
+              Start="0,0"
+              End="0,18.8058833052962">
+              <mssgle:Curve.Segments>
+                <mssgle:SegmentCollection
+                  Capacity="5">
+                  <mssgle:LineSegment
+                    End="0,18.8058833052962" />
+                </mssgle:SegmentCollection>
+              </mssgle:Curve.Segments>
+            </mssgle:Curve>
+          </EdgeLayout.Curve>
+          <EdgeLayout.Labels>
+            <EdgeLabelCollection />
+          </EdgeLayout.Labels>
+        </EdgeLayout>
+        <EdgeLayout
+          Id="Package.PrecedenceConstraints[Constraint 2]"
+          TopLeft="218.457144949387,193.929413901069">
+          <EdgeLayout.Curve>
+            <mssgle:Curve
+              StartConnector="{assembly:Null}"
+              EndConnector="20.6285715550806,22.6352950185221"
+              Start="0,0"
+              End="20.6285715550806,15.1352950185221">
+              <mssgle:Curve.Segments>
+                <mssgle:SegmentCollection
+                  Capacity="5">
+                  <mssgle:LineSegment
+                    End="0,7.31764750926104" />
+                  <mssgle:CubicBezierSegment
+                    Point1="0,7.31764750926104"
+                    Point2="0,11.317647509261"
+                    Point3="4,11.317647509261" />
+                  <mssgle:LineSegment
+                    End="16.6285715550806,11.317647509261" />
+                  <mssgle:CubicBezierSegment
+                    Point1="16.6285715550806,11.317647509261"
+                    Point2="20.6285715550806,11.317647509261"
+                    Point3="20.6285715550806,15.317647509261" />
+                  <mssgle:LineSegment
+                    End="20.6285715550806,15.1352950185221" />
+                </mssgle:SegmentCollection>
+              </mssgle:Curve.Segments>
+            </mssgle:Curve>
+          </EdgeLayout.Curve>
+          <EdgeLayout.Labels>
+            <EdgeLabelCollection />
+          </EdgeLayout.Labels>
+        </EdgeLayout>
+        <EdgeLayout
+          Id="Package.PrecedenceConstraints[Constraint 3]"
+          TopLeft="239.085716504468,258.164708919591">
+          <EdgeLayout.Curve>
+            <mssgle:Curve
+              StartConnector="{assembly:Null}"
+              EndConnector="-35.3904761710147,26.3058833052959"
+              Start="0,0"
+              End="-35.3904761710147,18.8058833052959">
+              <mssgle:Curve.Segments>
+                <mssgle:SegmentCollection
+                  Capacity="5">
+                  <mssgle:LineSegment
+                    End="0,11.6657424459897" />
+                  <mssgle:CubicBezierSegment
+                    Point1="0,11.6657424459897"
+                    Point2="0,15.6657424459897"
+                    Point3="-4,15.6657424459897" />
+                  <mssgle:LineSegment
+                    End="-31.3904761710147,15.6657424459897" />
+                  <mssgle:CubicBezierSegment
+                    Point1="-31.3904761710147,15.6657424459897"
+                    Point2="-35.3904761710147,15.6657424459897"
+                    Point3="-35.3904761710147,19.6657424459897" />
+                  <mssgle:LineSegment
+                    End="-35.3904761710147,18.8058833052959" />
+                </mssgle:SegmentCollection>
+              </mssgle:Curve.Segments>
+            </mssgle:Curve>
+          </EdgeLayout.Curve>
+          <EdgeLayout.Labels>
+            <EdgeLabelCollection />
+          </EdgeLayout.Labels>
+        </EdgeLayout>
+        <EdgeLayout
+          Id="Package.PrecedenceConstraints[Constraint 4]"
+          TopLeft="271.96190700012,284.470592224887">
+          <EdgeLayout.Curve>
+            <mssgle:Curve
+              StartConnector="{assembly:Null}"
+              EndConnector="189.371433008934,-225.741180219948"
+              Start="0,0"
+              End="189.371433008934,-218.241180219948">
+              <mssgle:Curve.Segments>
+                <mssgle:SegmentCollection
+                  Capacity="5">
+                  <mssgle:LineSegment
+                    End="0,-108.825691672509" />
+                  <mssgle:CubicBezierSegment
+                    Point1="0,-108.825691672509"
+                    Point2="0,-112.825691672509"
+                    Point3="4,-112.825691672509" />
+                  <mssgle:LineSegment
+                    End="185.371433008934,-112.825691672509" />
+                  <mssgle:CubicBezierSegment
+                    Point1="185.371433008934,-112.825691672509"
+                    Point2="189.371433008934,-112.825691672509"
+                    Point3="189.371433008934,-116.825691672509" />
+                  <mssgle:LineSegment
+                    End="189.371433008934,-218.241180219948" />
+                </mssgle:SegmentCollection>
+              </mssgle:Curve.Segments>
+            </mssgle:Curve>
+          </EdgeLayout.Curve>
+          <EdgeLayout.Labels>
+            <EdgeLabelCollection />
+          </EdgeLayout.Labels>
+        </EdgeLayout>
+      </GraphLayout>
+    </LayoutInfo>
+  </Package>
+</Objects>]]></DTS:DesignTimeProperties>
+</DTS:Executable>
